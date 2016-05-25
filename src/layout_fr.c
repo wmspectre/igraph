@@ -82,7 +82,7 @@ int igraph_layout_i_fr(const igraph_t *graph,
        for unconnected graphs */
     igraph_vector_float_null(&dispx);
     igraph_vector_float_null(&dispy);
-    if (conn) {
+    if (1) {
       for (v=0; v<no_nodes; v++) {
 	for (u=v+1; u<no_nodes; u++) {
 	  float dx=MATRIX(*res, v, 0) - MATRIX(*res, u, 0);
