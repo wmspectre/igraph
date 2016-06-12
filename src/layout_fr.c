@@ -37,7 +37,8 @@ int igraph_layout_i_fr(const igraph_t *graph,
 		       const igraph_vector_t *minx,
 		       const igraph_vector_t *maxx,
 		       const igraph_vector_t *miny,
-		       const igraph_vector_t *maxy) {
+		       const igraph_vector_t *maxy,
+			   const igraph_vector_t * new_v) {
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
   igraph_integer_t no_edges=igraph_ecount(graph);
@@ -75,6 +76,12 @@ int igraph_layout_i_fr(const igraph_t *graph,
   IGRAPH_CHECK(igraph_vector_float_init(&dispy, no_nodes));
   IGRAPH_FINALLY(igraph_vector_float_destroy, &dispy);
 
+  /* here we check for new_v parameter, see if need to calculate all the nodes position */
+  if (new_v) {
+	  igraph_vector_sort(new_v);
+  }
+
+  igraph_boot_t is_new;
   for (i=0; i<niter; i++) {
     igraph_integer_t v, u, e;
 
@@ -82,7 +89,7 @@ int igraph_layout_i_fr(const igraph_t *graph,
        for unconnected graphs */
     igraph_vector_float_null(&dispx);
     igraph_vector_float_null(&dispy);
-    if (1) {
+    if (conn) {
       for (v=0; v<no_nodes; v++) {
 	for (u=v+1; u<no_nodes; u++) {
 	  float dx=MATRIX(*res, v, 0) - MATRIX(*res, u, 0);
@@ -103,6 +110,10 @@ int igraph_layout_i_fr(const igraph_t *graph,
       }
     } else {
       for (v=0; v<no_nodes; v++) {
+    is_new = igraph_vector_binsearch2(new_v, v );
+    if (!is_new) {
+    	continue;
+    }
 	for (u=v+1; u<no_nodes; u++) {
 	  float dx=MATRIX(*res, v, 0) - MATRIX(*res, u, 0);
 	  float dy=MATRIX(*res, v, 1) - MATRIX(*res, u, 1);
@@ -183,7 +194,7 @@ int igraph_layout_i_grid_fr(const igraph_t *graph,
 	    igraph_integer_t niter, igraph_real_t start_temp,
 	    const igraph_vector_t *weight, const igraph_vector_t *minx,
 	    const igraph_vector_t *maxx, const igraph_vector_t *miny,
-	    const igraph_vector_t *maxy) {
+	    const igraph_vector_t *maxy, const igraph_vector_t * new_v) {
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
   igraph_integer_t no_edges=igraph_ecount(graph);
@@ -358,7 +369,8 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
 				       const igraph_vector_t *minx,
 				       const igraph_vector_t *maxx,
 				       const igraph_vector_t *miny,
-				       const igraph_vector_t *maxy) {
+				       const igraph_vector_t *maxy,
+					   const igraph_vector_t *new_v) {
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
 
@@ -406,10 +418,10 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
 
   if (grid == IGRAPH_LAYOUT_GRID) {
     return igraph_layout_i_grid_fr(graph, res, use_seed, niter, start_temp,
-				   weight, minx, maxx, miny, maxy);
+				   weight, minx, maxx, miny, maxy, new_v);
   } else {
     return igraph_layout_i_fr(graph, res, use_seed, niter, start_temp,
-			      weight, minx, maxx, miny, maxy);
+			      weight, minx, maxx, miny, maxy, new_v);
   }
 }
 
@@ -472,7 +484,8 @@ int igraph_layout_fruchterman_reingold_3d(const igraph_t *graph,
 					  const igraph_vector_t *miny,
 					  const igraph_vector_t *maxy,
 					  const igraph_vector_t *minz,
-					  const igraph_vector_t *maxz) {
+					  const igraph_vector_t *maxz,
+					  const igraph_vector_t *new_v) {
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
   igraph_integer_t no_edges=igraph_ecount(graph);
