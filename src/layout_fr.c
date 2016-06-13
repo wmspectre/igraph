@@ -42,13 +42,27 @@ int igraph_layout_i_fr(const igraph_t *graph,
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
   igraph_integer_t no_edges=igraph_ecount(graph);
-  igraph_integer_t i;
+  igraph_integer_t i, k;
   igraph_vector_float_t dispx, dispy;
   igraph_real_t temp=start_temp;
   igraph_real_t difftemp=start_temp / niter;
   float width=sqrtf(no_nodes), height=width;
   igraph_bool_t conn=1;
   float C;
+  igraph_vector_t *new_v_c;
+
+  igraph_vector_copy(new_v_c, new_v);
+  /* here we check for new_v parameter, see if need to calculate all the nodes position */
+  if (new_v_c) {
+	  igraph_vector_sort(new_v_c);
+      igraph_integer_t new_v_size;
+      new_v_size = igraph_vector_size(new_v_c);
+      for (k=0; k <new_v_size; k++) {
+    	  printf("%f\n", VECTOR(*new_v_c)[k]);
+      }
+  } else {
+	  printf("New v is null\n");
+  }
 
   igraph_is_connected(graph, &conn, IGRAPH_WEAK);
   if (!conn) { C = no_nodes * sqrtf(no_nodes); }
@@ -76,12 +90,7 @@ int igraph_layout_i_fr(const igraph_t *graph,
   IGRAPH_CHECK(igraph_vector_float_init(&dispy, no_nodes));
   IGRAPH_FINALLY(igraph_vector_float_destroy, &dispy);
 
-  /* here we check for new_v parameter, see if need to calculate all the nodes position */
-  if (new_v) {
-	  igraph_vector_sort(new_v);
-  }
-
-  igraph_boot_t is_new;
+  igraph_bool_t is_new;
   for (i=0; i<niter; i++) {
     igraph_integer_t v, u, e;
 
@@ -110,11 +119,11 @@ int igraph_layout_i_fr(const igraph_t *graph,
       }
     } else {
       for (v=0; v<no_nodes; v++) {
-    is_new = igraph_vector_binsearch2(new_v, v );
-    if (!is_new) {
-    	continue;
-    }
 	for (u=v+1; u<no_nodes; u++) {
+	  is_new = igraph_vector_binsearch2(new_v_c, v );
+	  if (!is_new) {
+		  continue;
+	  }
 	  float dx=MATRIX(*res, v, 0) - MATRIX(*res, u, 0);
 	  float dy=MATRIX(*res, v, 1) - MATRIX(*res, u, 1);
 	  float dlen, rdlen;
@@ -141,6 +150,9 @@ int igraph_layout_i_fr(const igraph_t *graph,
       /* each edges is an ordered pair of vertices v and u */
       igraph_integer_t v=IGRAPH_FROM(graph, e);
       igraph_integer_t u=IGRAPH_TO(graph, e);
+      if (!igraph_vector_binsearch2(new_v_c, v) && !igraph_vector_binsearch2(new_v_c, u)) {
+    	  continue;
+      }
       igraph_real_t dx=MATRIX(*res, v, 0) - MATRIX(*res, u, 0);
       igraph_real_t dy=MATRIX(*res, v, 1) - MATRIX(*res, u, 1);
       igraph_real_t w=weight ? VECTOR(*weight)[e] : 1.0;
@@ -149,11 +161,17 @@ int igraph_layout_i_fr(const igraph_t *graph,
       VECTOR(dispy)[v] -= (dy * dlen);
       VECTOR(dispx)[u] += (dx * dlen);
       VECTOR(dispy)[u] += (dy * dlen);
+      if (!igraph_vector_binsearch2(new_v_c, v) && !igraph_vector_binsearch2(new_v_c, u)) {
+    	  printf("%f,%f\n", dx, dy);
+      }
     }
 
     /* limit max displacement to temperature t and prevent from
        displacement outside frame */
     for (v=0; v<no_nodes; v++) {
+	  if (!igraph_vector_binsearch2(new_v_c, v )) {
+		  continue;
+	  }
       igraph_real_t dx=VECTOR(dispx)[v] + RNG_UNIF01() * 1e-9;
       igraph_real_t dy=VECTOR(dispy)[v] + RNG_UNIF01() * 1e-9;
       igraph_real_t displen=sqrt(dx * dx + dy * dy);
@@ -186,6 +204,7 @@ int igraph_layout_i_fr(const igraph_t *graph,
   igraph_vector_float_destroy(&dispy);
   IGRAPH_FINALLY_CLEAN(2);
   
+  fflush(stdout);
   return 0;
 }
 
@@ -373,6 +392,7 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
 					   const igraph_vector_t *new_v) {
 
   igraph_integer_t no_nodes=igraph_vcount(graph);
+  printf("Hey, the fruchterman reingold layout has been called!\n");
 
   if (niter < 0) {
     IGRAPH_ERROR("Number of iterations must be non-negative in "
