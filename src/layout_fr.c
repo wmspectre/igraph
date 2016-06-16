@@ -1,6 +1,6 @@
 /* -*- mode: C -*-  */
 /* vim:set ts=2 sw=2 sts=2 et: */
-/* 
+/*
    IGraph R package.
    Copyright (C) 2014  Gabor Csardi <csardi.gabor@gmail.com>
    334 Harvard street, Cambridge, MA 02139 USA
@@ -17,7 +17,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301 USA
 
 */
@@ -114,8 +114,8 @@ int igraph_layout_i_fr(const igraph_t *graph,
 
             VECTOR(dispx)[n_v] += dx/dlen;
             VECTOR(dispy)[n_v] += dy/dlen;
-            VECTOR(dispx)[u] -= dx/dlen;
-            VECTOR(dispy)[u] -= dy/dlen;
+            // VECTOR(dispx)[u] -= dx/dlen;
+            // VECTOR(dispy)[u] -= dy/dlen;
           }
         }
       } else {
@@ -162,8 +162,8 @@ int igraph_layout_i_fr(const igraph_t *graph,
 
             VECTOR(dispx)[n_v] += dx * (C-dlen * rdlen) / (dlen*C);
             VECTOR(dispy)[n_v] += dy * (C-dlen * rdlen) / (dlen*C);
-            VECTOR(dispx)[u] -= dx * (C-dlen * rdlen) / (dlen*C);
-            VECTOR(dispy)[u] -= dy * (C-dlen * rdlen) / (dlen*C);
+            // VECTOR(dispx)[u] -= dx * (C-dlen * rdlen) / (dlen*C);
+            // VECTOR(dispy)[u] -= dy * (C-dlen * rdlen) / (dlen*C);
           }
         }
       } else {
@@ -196,9 +196,13 @@ int igraph_layout_i_fr(const igraph_t *graph,
       /* each edges is an ordered pair of vertices v and u */
       igraph_integer_t v=IGRAPH_FROM(graph, e);
       igraph_integer_t u=IGRAPH_TO(graph, e);
+      igraph_integer_t u_mark, v_mark;
+
       if (new_v) {
+        v_mark = igraph_vector_binsearch2(new_v, v);
+        u_mark = igraph_vector_binsearch2(new_v, u);
         /* edges does not contain vertices in new_v will not calculate */
-        if (!igraph_vector_binsearch2(new_v, v) && !igraph_vector_binsearch2(new_v, u)) {
+        if (!v_mark && !u_mark) {
           continue;
         }
       }
@@ -207,10 +211,14 @@ int igraph_layout_i_fr(const igraph_t *graph,
       igraph_real_t dy=MATRIX(*res, v, 1) - MATRIX(*res, u, 1);
       igraph_real_t w=weight ? VECTOR(*weight)[e] : 1.0;
       igraph_real_t dlen=sqrt(dx * dx + dy * dy) * w;
-      VECTOR(dispx)[v] -= (dx * dlen);
-      VECTOR(dispy)[v] -= (dy * dlen);
-      VECTOR(dispx)[u] += (dx * dlen);
-      VECTOR(dispy)[u] += (dy * dlen);
+      if (v_mark) {
+        VECTOR(dispx)[v] -= (dx * dlen);
+        VECTOR(dispy)[v] -= (dy * dlen);
+      }
+      if (u_mark) {
+        VECTOR(dispx)[u] += (dx * dlen);
+        VECTOR(dispy)[u] += (dy * dlen);
+      }
     }
 
     /* limit max displacement to temperature t and prevent from
@@ -511,7 +519,7 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
   }
 
   if (grid == IGRAPH_LAYOUT_AUTOGRID) {
-    if (no_nodes > 1000) { 
+    if (no_nodes > 1000) {
       grid = IGRAPH_LAYOUT_GRID;
     } else {
       grid = IGRAPH_LAYOUT_NOGRID;
@@ -530,7 +538,7 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
 /**
  * \function igraph_layout_fruchterman_reingold_3d
  * \brief 3D Fruchterman-Reingold algorithm.
- * 
+ *
  * This is the 3D version of the force based
  * Fruchterman-Reingold layout (see \ref
  * igraph_layout_fruchterman_reingold for the 2D version
@@ -547,23 +555,23 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
  *        of movement alloved along one axis, within one step, for a
  *        vertex. Currently it is decreased linearly to zero during
  *        the iteration.
- * \param weight Pointer to a vector containing edge weights, 
- *        the attraction along the edges will be multiplied by these. 
+ * \param weight Pointer to a vector containing edge weights,
+ *        the attraction along the edges will be multiplied by these.
  *        It will be ignored if it is a null-pointer.
- * \param minx Pointer to a vector, or a \c NULL pointer. If not a 
+ * \param minx Pointer to a vector, or a \c NULL pointer. If not a
  *        \c NULL pointer then the vector gives the minimum
  *        \quote x \endquote coordinate for every vertex.
- * \param maxx Same as \p minx, but the maximum \quote x \endquote 
+ * \param maxx Same as \p minx, but the maximum \quote x \endquote
  *        coordinates.
- * \param miny Pointer to a vector, or a \c NULL pointer. If not a 
+ * \param miny Pointer to a vector, or a \c NULL pointer. If not a
  *        \c NULL pointer then the vector gives the minimum
  *        \quote y \endquote coordinate for every vertex.
- * \param maxy Same as \p miny, but the maximum \quote y \endquote 
+ * \param maxy Same as \p miny, but the maximum \quote y \endquote
  *        coordinates.
- * \param minz Pointer to a vector, or a \c NULL pointer. If not a 
+ * \param minz Pointer to a vector, or a \c NULL pointer. If not a
  *        \c NULL pointer then the vector gives the minimum
  *        \quote z \endquote coordinate for every vertex.
- * \param maxz Same as \p minz, but the maximum \quote z \endquote 
+ * \param maxz Same as \p minz, but the maximum \quote z \endquote
  *        coordinates.
  * \return Error code.
  *
@@ -571,16 +579,16 @@ int igraph_layout_fruchterman_reingold(const igraph_t *graph,
  *
  * Time complexity: O(|V|^2) in each
  * iteration, |V| is the number of
- * vertices in the graph. 
- * 
+ * vertices in the graph.
+ *
  */
 
-int igraph_layout_fruchterman_reingold_3d(const igraph_t *graph, 
+int igraph_layout_fruchterman_reingold_3d(const igraph_t *graph,
     igraph_matrix_t *res,
     igraph_bool_t use_seed,
     igraph_integer_t niter,
     igraph_real_t start_temp,
-    const igraph_vector_t *weight, 
+    const igraph_vector_t *weight,
     const igraph_vector_t *minx,
     const igraph_vector_t *maxx,
     const igraph_vector_t *miny,
@@ -761,8 +769,8 @@ int igraph_layout_fruchterman_reingold_3d(const igraph_t *graph,
         MATRIX(*res, v, 1) += (dy / displen) * my;
         MATRIX(*res, v, 2) += (dz / displen) * mz;
       }
-      if (minx && MATRIX(*res, v, 0) < VECTOR(*minx)[v]) { 
-        MATRIX(*res, v, 0) = VECTOR(*minx)[v]; 
+      if (minx && MATRIX(*res, v, 0) < VECTOR(*minx)[v]) {
+        MATRIX(*res, v, 0) = VECTOR(*minx)[v];
       }
       if (maxx && MATRIX(*res, v, 0) > VECTOR(*maxx)[v]) {
         MATRIX(*res, v, 0) = VECTOR(*maxx)[v];
